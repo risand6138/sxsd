@@ -1,24 +1,42 @@
-
-
-name: Windows - LiteManager
-
+name: System Info and Neofetch Check
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Manuálisan is elindíthatod a GitHub felületéről
 
 jobs:
-  build:
-    name: Start Building...
-    runs-on: windows-latest
-    timeout-minutes: 9999
+  sys-check:
+    # Itt hivatkozol a GitHub felületén korábban létrehozott Larger Runner címkéjére
+    runs-on: ubuntu-24-16core-64gb
     
+    timeout-minutes: 30
+
     steps:
-      - name: Downloading & Installing Essentials
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update apt package list
         run: |
-          Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
-          cmd /c Downloads.bat
+          sudo apt-get update
 
-      - name: Connect to LiteManager
-        run: cmd /c show.bat
+      - name: Install Neofetch
+        run: |
+          sudo apt-get install -y neofetch
 
-      - name: Time Counter
-        run: cmd /c loop.bat
+      - name: Run Neofetch and log output
+        run: |
+          echo "=== RUNNING NEOFETCH ===" > neofetch_output.log
+          neofetch --stdout >> neofetch_output.log
+          
+          echo -e "\n=== CPU & RAM DETAILS ===" >> neofetch_output.log
+          lscpu | grep -E '^CPU\(s\):|Model name' >> neofetch_output.log
+          free -h >> neofetch_output.log
+          
+          # Megjelenítjük a GitHub Actions konzolon is, hogy azonnal lásd
+          cat neofetch_output.log
+
+      # Ez a lépés összegyűjti és letölthetővé teszi a log fájlt a számodra
+      - name: Upload Neofetch Log Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runner-system-specs-log
+          path: neofetch_output.log
+          retention-days: 7
